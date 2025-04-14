@@ -1,1 +1,2 @@
-
+name: terrfaorm  git
+on: [push]
