@@ -23,10 +23,12 @@ jobs:
     - name: 'Checkout GitHub repository'
       uses: actions/checkout@v2
 
-    - name: 'Configure AWS credentials'
-      uses: azure-actions/configure-azure-credentials@v1
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
       with:
-       creds: ${{secrets.AZURE_CREDENTIALS}}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+
     - name: 'Set up Terraform'
       uses: hashicorp/setup-terraform@v1
       with:
