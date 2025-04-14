@@ -1,6 +1,7 @@
 resource "azurerm_resource_group" "example" {
   name     = "appgateway"
   location = "West Europe"
+
 }
 
 resource "azurerm_virtual_network" "example" {
