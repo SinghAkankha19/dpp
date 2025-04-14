@@ -46,11 +46,7 @@ resource "azurerm_application_gateway" "network" {
     tier     = "Standard_v2"
     capacity = 2
   }
- autoscale_configuration{
-max_capacity=10
-min_capacity=0
-
-}  
+   
   gateway_ip_configuration {
     name      = "my-gateway-ip-configuration"
     subnet_id = azurerm_subnet.example.id
