@@ -1,4 +1,7 @@
-
+resource "azurerm_resource_group" "example" {
+  name     = "app-gtw"
+  location = "West Europe"
+}
 
 resource "azurerm_virtual_network" "example" {
   name                = "example-network"
