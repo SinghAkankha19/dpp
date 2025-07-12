@@ -49,8 +49,11 @@ stages:
       displayName: 'Terraform Plan'
       workingDirectory: ./app-gateway
 
-    - publish: ./app-gateway/tfplan
-      artifact: tfplan-artifact
+    - task: PublishBuildArtifacts@1
+      inputs:
+          pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/tfplan'
+          artifactName: tfplan-artifact
+          publishLocation: Container
 
 # ───────────── Stage 2: Apply ─────────────
 - stage: TerraformApply
