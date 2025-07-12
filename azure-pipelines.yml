@@ -18,12 +18,7 @@ stages:
   jobs:
   - deployment: Terraform
     displayName: "Terraform Lint, Security Check, and Deploy"
-    #environment: approval-env  # 👈 This connects to an environment in Azure DevOps
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-          - checkout: self
+    
 
           - task: AzureCLI@2
             displayName: "Login via Azure CLI"
@@ -54,6 +49,15 @@ stages:
 
           - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
+             environment: production-env  # 🔐 Approvals can be configured here in DevOps UI
+                strategy:
+                  runOnce:
+                    deploy:
+                      steps:
+                      - download: current
+                        artifact: tfplan-artifact
+          steps:
+          - checkout: self
             environment: approval-env 
             condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
             workingDirectory: ./app-gateway
