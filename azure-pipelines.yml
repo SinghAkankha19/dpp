@@ -50,9 +50,17 @@ stages:
       workingDirectory: ./app-gateway
 
     - task: PublishBuildArtifacts@1
+      displayName: 'Publish tfplan Artifact'
       inputs:
         pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/tfplan'
         artifactName: tfplan-artifact
+        publishLocation: Container
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Lock File Artifact'
+      inputs:
+        pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/.terraform.lock.hcl'
+        artifactName: lockfile-artifact
         publishLocation: Container
 
 # ───────────── Stage 2: Terraform Apply ─────────────
@@ -63,7 +71,7 @@ stages:
   jobs:
   - deployment: Apply
     displayName: "Apply Terraform Changes"
-    environment: approval-env  # 🔐 This requires manual approval
+    environment: approval-env  # 🔐 Requires approval
     strategy:
       runOnce:
         deploy:
@@ -71,11 +79,20 @@ stages:
           - checkout: self
 
           - task: DownloadBuildArtifacts@0
+            displayName: 'Download tfplan Artifact'
             inputs:
               buildType: current
               downloadType: single
               artifactName: tfplan-artifact
               downloadPath: '$(System.DefaultWorkingDirectory)/tfplan-download'
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Lockfile Artifact'
+            inputs:
+              buildType: current
+              downloadType: single
+              artifactName: lockfile-artifact
+              downloadPath: '$(System.DefaultWorkingDirectory)/lockfile-download'
 
           - script: |
               curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
@@ -85,7 +102,16 @@ stages:
             displayName: 'Install Terraform'
 
           - script: |
-              copy "$(System.DefaultWorkingDirectory)\tfplan-download\tfplan-artifact\tfplan" tfplan
+              copy "$(System.DefaultWorkingDirectory)/lockfile-download/.terraform.lock.hcl" .
+            displayName: 'Restore Lock File'
+            workingDirectory: ./app-gateway
+
+          - script: terraform init -input=false
+            displayName: 'Terraform Init'
+            workingDirectory: ./app-gateway
+
+          - script: |
+              copy "$(System.DefaultWorkingDirectory)/tfplan-download/tfplan" ./tfplan
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             workingDirectory: ./app-gateway
