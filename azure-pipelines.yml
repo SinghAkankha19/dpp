@@ -12,8 +12,8 @@ variables:
   TFLINT_VERSION: '0.46.1'
   TFSEC_VERSION: '1.28.1'
 
+# ───────────── Stage 1: Terraform Plan ─────────────
 stages:
-# ───────────── Stage 1: Plan ─────────────
 - stage: TerraformPlan
   displayName: "Terraform Plan"
   jobs:
@@ -51,11 +51,11 @@ stages:
 
     - task: PublishBuildArtifacts@1
       inputs:
-          pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/tfplan'
-          artifactName: tfplan-artifact
-          publishLocation: Container
+        pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/tfplan'
+        artifactName: tfplan-artifact
+        publishLocation: Container
 
-# ───────────── Stage 2: Apply ─────────────
+# ───────────── Stage 2: Terraform Apply ─────────────
 - stage: TerraformApply
   displayName: "Terraform Apply"
   dependsOn: TerraformPlan
@@ -63,24 +63,29 @@ stages:
   jobs:
   - deployment: Apply
     displayName: "Apply Terraform Changes"
-    environment: approval-env  # 👈 Requires approval before running this job
+    environment: approval-env  # 🔐 This requires manual approval
     strategy:
       runOnce:
         deploy:
           steps:
-          - download: current
-            artifact: tfplan-artifact
-
           - checkout: self
 
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: current
+              downloadType: single
+              artifactName: tfplan-artifact
+              downloadPath: '$(System.DefaultWorkingDirectory)/tfplan-download'
+
           - script: |
-              move tfplan-artifact/tfplan ./tfplan
               curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
               unzip terraform.zip
               sudo mv terraform /usr/local/bin/
               terraform -version
             displayName: 'Install Terraform'
 
-          - script: terraform apply -auto-approve tfplan
+          - script: |
+              cp $(System.DefaultWorkingDirectory)/tfplan-download/tfplan ./tfplan
+              terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             workingDirectory: ./app-gateway
