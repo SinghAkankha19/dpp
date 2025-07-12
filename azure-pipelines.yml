@@ -84,7 +84,7 @@ stages:
               buildType: current
               downloadType: single
               artifactName: tfplan-artifact
-              downloadPath: '$(System.DefaultWorkingDirectory)/tfplan-download'
+              downloadPath: '$(System.DefaultWorkingDirectory)\tfplan-download'
 
           - task: DownloadBuildArtifacts@0
             displayName: 'Download Lockfile Artifact'
@@ -92,26 +92,31 @@ stages:
               buildType: current
               downloadType: single
               artifactName: lockfile-artifact
-              downloadPath: '$(System.DefaultWorkingDirectory)/lockfile-download'
+              downloadPath: '$(System.DefaultWorkingDirectory)\lockfile-download'
 
           - script: |
-              curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
-              unzip terraform.zip
-              sudo mv terraform /usr/local/bin/
+              curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_windows_amd64.zip
+              tar -xf terraform.zip
+              move terraform.exe C:\terraform.exe
+              set PATH=C:\;%PATH%
               terraform -version
-            displayName: 'Install Terraform'
+            displayName: 'Install Terraform (Windows)'
+            # OR use bash version if on Linux agent
 
           - script: |
-              copy "$(System.DefaultWorkingDirectory)/lockfile-download/.terraform.lock.hcl" .
+              dir "$(System.DefaultWorkingDirectory)\lockfile-download"
+              copy "$(System.DefaultWorkingDirectory)\lockfile-download\.terraform.lock.hcl" ".terraform.lock.hcl"
             displayName: 'Restore Lock File'
-            workingDirectory: ./app-gateway
+            workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
 
           - script: terraform init -input=false
             displayName: 'Terraform Init'
-            workingDirectory: ./app-gateway
+            workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
 
           - script: |
-              copy "$(System.DefaultWorkingDirectory)/tfplan-download/tfplan" ./tfplan
+              dir "$(System.DefaultWorkingDirectory)\tfplan-download"
+              copy "$(System.DefaultWorkingDirectory)\tfplan-download\tfplan" "tfplan"
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
-            workingDirectory: ./app-gateway
+            workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
+
