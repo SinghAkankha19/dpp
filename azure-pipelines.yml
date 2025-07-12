@@ -54,5 +54,6 @@ stages:
 
           - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
+            environment: approval-env 
             condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
             workingDirectory: ./app-gateway
