@@ -117,7 +117,7 @@ stages:
 
           - script: |
               dir "$(System.DefaultWorkingDirectory)\tfplan-download"
-              copy "$(System.DefaultWorkingDirectory)\tfplan-download\tfplan" "tfplan"
+              copy "$(System.DefaultWorkingDirectory)\tfplan-download\tfplan-artifact\.tfplan" .
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
