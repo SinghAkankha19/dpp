@@ -39,7 +39,7 @@ stages:
         unzip terraform.zip
         sudo mv terraform /usr/local/bin/
         terraform -version
-      displayName: 'Install Terraform'
+      displayName: 'Install Terraform*****'
 
     - script: terraform init
       displayName: 'Terraform Init'
