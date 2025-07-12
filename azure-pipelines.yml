@@ -13,46 +13,70 @@ variables:
   TFSEC_VERSION: '1.28.1'
 
 stages:
-- stage: TerraformCI
-  displayName: "Terraform CI/CD"
+# ───────────── Stage 1: Plan ─────────────
+- stage: TerraformPlan
+  displayName: "Terraform Plan"
   jobs:
-  - deployment: Terraform
-    displayName: "Terraform Lint, Security Check, and Deploy"
-    environment: approval-env  # 👈 This connects to an environment in Azure DevOps
+  - job: Plan
+    displayName: "Terraform Init, Validate, Plan"
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: "Login via Azure CLI"
+      inputs:
+        azureSubscription: 'MyAzureConnection'
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: echo "Logged in successfully"
+
+    - script: |
+        curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+        terraform -version
+      displayName: 'Install Terraform'
+
+    - script: terraform init
+      displayName: 'Terraform Init'
+      workingDirectory: ./app-gateway
+
+    - script: terraform validate
+      displayName: 'Terraform Validate'
+      workingDirectory: ./app-gateway
+
+    - script: terraform plan -out=tfplan
+      displayName: 'Terraform Plan'
+      workingDirectory: ./app-gateway
+
+    - publish: ./app-gateway/tfplan
+      artifact: tfplan-artifact
+
+# ───────────── Stage 2: Apply ─────────────
+- stage: TerraformApply
+  displayName: "Terraform Apply"
+  dependsOn: TerraformPlan
+  condition: succeeded()
+  jobs:
+  - deployment: Apply
+    displayName: "Apply Terraform Changes"
+    environment: approval-env  # 👈 Requires approval before running this job
     strategy:
       runOnce:
         deploy:
           steps:
-          - checkout: self
+          - download: current
+            artifact: tfplan-artifact
 
-          - task: AzureCLI@2
-            displayName: "Login via Azure CLI"
-            inputs:
-              azureSubscription: 'MyAzureConnection'
-              scriptType: pscore
-              scriptLocation: inlineScript
-              inlineScript: echo "Logged in successfully"
+          - checkout: self
 
           - script: |
               curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
               unzip terraform.zip
               sudo mv terraform /usr/local/bin/
               terraform -version
-            displayName: 'Install Terraform*****'
-
-          - script: terraform init
-            displayName: 'Terraform Init'
-            workingDirectory: ./app-gateway
-
-          - script: terraform validate
-            displayName: 'Terraform Validate'
-            workingDirectory: ./app-gateway
-
-          - script: terraform plan -out=tfplan
-            displayName: 'Terraform Plan'
-            workingDirectory: ./app-gateway
+            displayName: 'Install Terraform'
 
           - script: terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
-            condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
             workingDirectory: ./app-gateway
