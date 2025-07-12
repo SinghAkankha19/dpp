@@ -3,7 +3,7 @@ trigger:
     include:
       - main
 pool:
-  name: git-demo
+  name: Azure Pipelines
 
 variables:
   AWS_REGION: 'us-east-1'
