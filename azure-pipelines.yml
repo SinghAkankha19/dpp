@@ -29,7 +29,31 @@ stages:
     - task: AzureCLI@2
       displayName: "Login via Azure CLI"
       inputs:
-        azureSubscription: '<Your-Service-Connection-Name>'
+        azureSubscription: 'MyAzureConnection'
         scriptType: bash
         scriptLocation: inlineScript
-        inlineScript: echo "Logged in suc
+        inlineScript: echo "Logged in successfully"
+
+    - script: |
+        curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+        terraform -version
+      displayName: 'Install Terraform'
+
+    - script: terraform init
+      displayName: 'Terraform Init'
+      workingDirectory: ./app-gateway
+
+    - script: terraform validate
+      displayName: 'Terraform Validate'
+      workingDirectory: ./app-gateway
+
+    - script: terraform plan -out=tfplan
+      displayName: 'Terraform Plan'
+      workingDirectory: ./app-gateway
+
+    - script: terraform apply -auto-approve tfplan
+      displayName: 'Terraform Apply'
+      condition: eq(variables['Build.SourceBranch'], 'refs/heads/main')
+      workingDirectory: ./app-gateway
