@@ -85,7 +85,7 @@ stages:
             displayName: 'Install Terraform'
 
           - script: |
-              cp $(System.DefaultWorkingDirectory)/tfplan-download/tfplan ./tfplan
+              copy $(System.DefaultWorkingDirectory)/tfplan-download/tfplan ./tfplan
               terraform apply -auto-approve tfplan
             displayName: 'Terraform Apply'
             workingDirectory: ./app-gateway
