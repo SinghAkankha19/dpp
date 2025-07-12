@@ -17,8 +17,7 @@ stages:
   jobs:
   - job: Terraform
     displayName: "Terraform Lint, Security Check, and Deploy"
-    pool:
-      vmImage: ubuntu-latest
+  
 
     steps:
     - checkout: self
