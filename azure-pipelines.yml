@@ -105,7 +105,9 @@ stages:
 
           - script: |
               dir "$(System.DefaultWorkingDirectory)\lockfile-download"
-              copy "$(System.DefaultWorkingDirectory)\lockfile-download\.terraform.lock.hcl" ".terraform.lock.hcl"
+              #copy "$(System.DefaultWorkingDirectory)\lockfile-download\.terraform.lock.hcl" ".terraform.lock.hcl"
+              copy "$(System.DefaultWorkingDirectory)\lockfile-download\lockfile-artifact\.terraform.lock.hcl" .
+              
             displayName: 'Restore Lock File'
             workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
 
