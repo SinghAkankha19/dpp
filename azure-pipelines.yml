@@ -26,9 +26,10 @@ stages:
       displayName: "Login via Azure CLI"
       inputs:
         azureSubscription: 'MyAzureConnection'
-        scriptType: bash
+        scriptType: pscore
         scriptLocation: inlineScript
         inlineScript: echo "Logged in successfully"
+        
 
     - script: |
         curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
