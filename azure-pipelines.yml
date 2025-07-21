@@ -1,0 +1,124 @@
+
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  name: Default
+
+variables:
+  AWS_REGION: 'us-east-1'
+  TF_VERSION: '1.4.0'
+  TFLINT_VERSION: '0.46.1'
+  TFSEC_VERSION: '1.28.1'
+
+# ───────────── Stage 1: Terraform Plan ─────────────
+stages:
+- stage: TerraformPlan
+  displayName: "Terraform Plan"
+  jobs:
+  - job: Plan
+    displayName: "Terraform Init, Validate, Plan"
+    steps:
+    - checkout: self
+
+    - task: AzureCLI@2
+      displayName: "Login via Azure CLI"
+      inputs:
+        azureSubscription: 'ADO-ABC'
+        scriptType: pscore
+        scriptLocation: inlineScript
+        inlineScript: echo "Logged in successfully"
+
+    - script: |
+        curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+        unzip terraform.zip
+        sudo mv terraform /usr/local/bin/
+        terraform -version
+      displayName: 'Install Terraform'
+
+    - script: terraform init
+      displayName: 'Terraform Init'
+      workingDirectory: ./app-gateway
+
+    - script: terraform validate
+      displayName: 'Terraform Validate'
+      workingDirectory: ./app-gateway
+
+    - script: terraform plan -out=tfplan
+      displayName: 'Terraform Plan'
+      workingDirectory: ./app-gateway
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish tfplan Artifact'
+      inputs:
+        pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/tfplan'
+        artifactName: tfplan-artifact
+        publishLocation: Container
+
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Lock File Artifact'
+      inputs:
+        pathToPublish: '$(System.DefaultWorkingDirectory)/app-gateway/.terraform.lock.hcl'
+        artifactName: lockfile-artifact
+        publishLocation: Container
+
+# ───────────── Stage 2: Terraform Apply ─────────────
+- stage: TerraformApply
+  displayName: "Terraform Apply"
+  dependsOn: TerraformPlan
+  condition: succeeded()
+  jobs:
+  - deployment: Apply
+    displayName: "Apply Terraform Changes"
+    environment: approval-env  # 🔐 Requires approval
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download tfplan Artifact'
+            inputs:
+              buildType: current
+              downloadType: single
+              artifactName: tfplan-artifact
+              downloadPath: '$(System.DefaultWorkingDirectory)\tfplan-download'
+
+          - task: DownloadBuildArtifacts@0
+            displayName: 'Download Lockfile Artifact'
+            inputs:
+              buildType: current
+              downloadType: single
+              artifactName: lockfile-artifact
+              downloadPath: '$(System.DefaultWorkingDirectory)\lockfile-download'
+
+          - script: |
+              curl -o terraform.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_windows_amd64.zip
+              tar -xf terraform.zip
+              move terraform.exe C:\terraform.exe
+              set PATH=C:\;%PATH%
+              terraform -version
+            displayName: 'Install Terraform (Windows)'
+            # OR use bash version if on Linux agent
+
+          - script: |
+              dir "$(System.DefaultWorkingDirectory)\lockfile-download"
+              #copy "$(System.DefaultWorkingDirectory)\lockfile-download\.terraform.lock.hcl" ".terraform.lock.hcl"
+              copy "$(System.DefaultWorkingDirectory)\lockfile-download\lockfile-artifact\.terraform.lock.hcl" .
+              
+            displayName: 'Restore Lock File'
+            workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
+
+          - script: terraform init -input=false
+            displayName: 'Terraform Init'
+            workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
+
+          - script: |
+              dir "$(System.DefaultWorkingDirectory)\tfplan-download"
+              copy "$(System.DefaultWorkingDirectory)\tfplan-download\tfplan-artifact\tfplan" tfplan
+              terraform apply -auto-approve tfplan
+            displayName: 'Terraform Apply'
+            workingDirectory: $(System.DefaultWorkingDirectory)\app-gateway
