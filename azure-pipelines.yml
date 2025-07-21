@@ -4,7 +4,7 @@ trigger:
       - main
 
 pool:
-  name: Default
+  name: ADO-ABC
 
 variables:
   AWS_REGION: 'us-east-1'
