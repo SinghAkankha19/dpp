@@ -102,7 +102,7 @@ stages:
               set PATH=C:\;%PATH%
               terraform -version
             displayName: 'Install Terraform (Windows)'
-            # OR use bash version if on Linux agent
+            
 
           - script: |
               dir "$(System.DefaultWorkingDirectory)\lockfile-download"
